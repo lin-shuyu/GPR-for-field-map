@@ -22,7 +22,7 @@ n = size(y,1);
 
 K = covMatrixSE(x_train,x_train,theta);
 K_y = K + theta(3) * eye(n);
-f =  0.5*y.'*K_y*y + 0.5*log10(det(K_y)) + n/0.5*log10(2*pi);
+f =  0.5*y.'*K_y*y + 0.5*log(det(K_y)) + n/0.5*log(2*pi);
 
 % compute the gradient to speed up (to be complete)
 end
