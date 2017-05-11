@@ -113,43 +113,7 @@ for i = 1:n_select
         end
     end
 end
-% repeated_Pnt_Counter = 0;
-% repeated_Pnt_Position = zeros(1,2);
-% for i = 1:n_select
-%     if i == 1
-%         x_train = Trajectory{traj_select_Index(i)}(1:2,:).';
-%         n_sample = size(Trajectory{traj_select_Index(i)},2);
-%     else
-%         n_add = size(Trajectory{traj_select_Index(i)},2);
-%         for j = 1:n_add
-%             data_to_add = Trajectory{traj_select_Index(i)}(1:2,j).';
-%             index_Repeat{1} = find(x_train(:,1) == data_to_add(1));
-%             index_Repeat{2} = find(x_train(:,2) == data_to_add(2));
-%             if (isempty(index_Repeat{1})||isempty(index_Repeat{2})) 
-%                 n_sample = n_sample+1;
-%                 x_train(n_sample,:) = data_to_add;
-%             else
-%                 repeated_Pnt = cell(2,1);
-%                 for m = 1:min(length(index_Repeat{1}),length(index_Repeat{2}))
-%                     if length(index_Repeat{1}) == min(length(index_Repeat{1}),length(index_Repeat{2}))
-%                         repeated_Pnt{1} = 2;
-%                         repeated_Pnt{2} = find(index_Repeat{2}==index_Repeat{1}(m));
-%                     else
-%                         repeated_Pnt{1} = 1;
-%                         repeated_Pnt{2} = find(index_Repeat{1}==index_Repeat{2}(m));
-%                     end
-%                 end
-%                 if ~isempty(repeated_Pnt{2})
-%                     repeated_Pnt_Counter = repeated_Pnt_Counter + 1;
-%                     repeated_Pnt_Position(repeated_Pnt_Counter,:) = [traj_select_Index(i),index_Repeat{repeated_Pnt{1}}(repeated_Pnt{2})];
-%                 else
-%                     n_sample = n_sample+1;
-%                     x_train(n_sample,:) = data_to_add;
-%                 end
-%             end
-%         end
-%     end
-% end
+
 
 %% generate the function value at Trajectory location based on a SE GP kernel
 x_train = selected_pts_nonRepeated(:,2:3);
