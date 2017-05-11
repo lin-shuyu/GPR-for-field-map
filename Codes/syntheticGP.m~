@@ -65,50 +65,95 @@ end
 %% select n_select trajectories to use - randomly use which one
 n_traj = size(Trajectory,2);
 rng('shuffle');
-n_select = 20;
-traj_select_Index = randperm(n_traj,n_select);
+n_select = 4;
+traj_select_Index = zeros(4,1);
+traj_select_Index(1) = randi([1 21],1,1); % generate one horizontal traj
+traj_select_Index(2) = randi([22 42],1,1); % generate one vertical traj
+traj_select_Index(3) = randi([43 44],1,1); % generate one diagonal traj
+traj_select_Index(4) = randi([44 54],1,1); % generate one curved traj
+
+% randperm(n_traj,n_select); % generate non-repeated integer values
 
 % keep track of the input space locations of these measurements along the selected trajectories
-repeated_Pnt_Counter = 0;
-repeated_Pnt_Position = zeros(1,2);
+% keep a record of all data points along the selected trajectories
+n_pts = 21*3+41;
+selected_pts_all = zeros(n_pts,3);
+index_counter = 1;
+for i = 1:n_select
+    traj_pts = size(Trajectory{traj_select_Index(i)},2);
+    selected_pts_all(index_counter:index_counter+traj_pts-1,1) = traj_select_Index(i) * ones(traj_pts,1);
+    selected_pts_all(index_counter:index_counter+traj_pts-1,2:3) = Trajectory{traj_select_Index(i)}(1:2,:).';
+    index_counter =  index_counter + traj_pts;
+end
+
+% remove the repeated points and get a list of unique locations 
+selected_pts_nonRepeated = selected_pts_all;
+index_counter = 1;
 for i = 1:n_select
     if i == 1
-        x_train = Trajectory{traj_select_Index(i)}(1:2,:).';
-        n_sample = size(Trajectory{traj_select_Index(i)},2);
+        index_counter = index_counter + size(Trajectory{traj_select_Index(i)},2);
+        repeat_counter = index_counter;
     else
-        n_add = size(Trajectory{traj_select_Index(i)},2);
-        for j = 1:n_add
-            data_to_add = Trajectory{traj_select_Index(i)}(1:2,j).';
-            index_Repeat{1} = find(x_train(:,1) == data_to_add(1));
-            index_Repeat{2} = find(x_train(:,2) == data_to_add(2));
-            if (isempty(index_Repeat{1})||isempty(index_Repeat{2})) 
-                n_sample = n_sample+1;
-                x_train(n_sample,:) = data_to_add;
-            else
-                repeated_Pnt = cell(2,1);
-                for m = 1:min(length(index_Repeat{1}),length(index_Repeat{2}))
-                    if length(index_Repeat{1}) == min(length(index_Repeat{1}),length(index_Repeat{2}))
-                        repeated_Pnt{1} = 2;
-                        repeated_Pnt{2} = find(index_Repeat{2}==index_Repeat{1}(m));
-                    else
-                        repeated_Pnt{1} = 1;
-                        repeated_Pnt{2} = find(index_Repeat{1}==index_Repeat{2}(m));
-                    end
+        for p = index_counter:n_pts
+            pt_to_check = selected_pts_all(p,2:3).';
+            x_index = find(selected_pts_all(1:p-1,2) == pt_to_check(1));
+            y_index = find(selected_pts_all(1:p-1,3) == pt_to_check(2));
+            if (isempty(x_index) && isempty(y_index))
+                for m = 1:length(x_index)
+                    repeat_index = find(y_index == x_index(m));
                 end
-                if ~isempty(repeated_Pnt{2})
-                    repeated_Pnt_Counter = repeated_Pnt_Counter + 1;
-                    repeated_Pnt_Position(repeated_Pnt_Counter,:) = [traj_select_Index(i),index_Repeat{repeated_Pnt{1}}(repeated_Pnt{2})];
-                else
-                    n_sample = n_sample+1;
-                    x_train(n_sample,:) = data_to_add;
-                end
+            else 
+                repeat_index = [];
             end
+            if ~isempty(repeat_index)
+                selected_pts_nonRepeated(repeat_counter,:) = [];
+                repeat_counter = repeat_counter - 1;
+            end
+            repeat_counter = repeat_counter + 1;
         end
     end
 end
+% repeated_Pnt_Counter = 0;
+% repeated_Pnt_Position = zeros(1,2);
+% for i = 1:n_select
+%     if i == 1
+%         x_train = Trajectory{traj_select_Index(i)}(1:2,:).';
+%         n_sample = size(Trajectory{traj_select_Index(i)},2);
+%     else
+%         n_add = size(Trajectory{traj_select_Index(i)},2);
+%         for j = 1:n_add
+%             data_to_add = Trajectory{traj_select_Index(i)}(1:2,j).';
+%             index_Repeat{1} = find(x_train(:,1) == data_to_add(1));
+%             index_Repeat{2} = find(x_train(:,2) == data_to_add(2));
+%             if (isempty(index_Repeat{1})||isempty(index_Repeat{2})) 
+%                 n_sample = n_sample+1;
+%                 x_train(n_sample,:) = data_to_add;
+%             else
+%                 repeated_Pnt = cell(2,1);
+%                 for m = 1:min(length(index_Repeat{1}),length(index_Repeat{2}))
+%                     if length(index_Repeat{1}) == min(length(index_Repeat{1}),length(index_Repeat{2}))
+%                         repeated_Pnt{1} = 2;
+%                         repeated_Pnt{2} = find(index_Repeat{2}==index_Repeat{1}(m));
+%                     else
+%                         repeated_Pnt{1} = 1;
+%                         repeated_Pnt{2} = find(index_Repeat{1}==index_Repeat{2}(m));
+%                     end
+%                 end
+%                 if ~isempty(repeated_Pnt{2})
+%                     repeated_Pnt_Counter = repeated_Pnt_Counter + 1;
+%                     repeated_Pnt_Position(repeated_Pnt_Counter,:) = [traj_select_Index(i),index_Repeat{repeated_Pnt{1}}(repeated_Pnt{2})];
+%                 else
+%                     n_sample = n_sample+1;
+%                     x_train(n_sample,:) = data_to_add;
+%                 end
+%             end
+%         end
+%     end
+% end
 
 %% generate the function value at Trajectory location based on a SE GP kernel
-n_pts = size(x_train,1);
+x_train = selected_pts_nonRepeated(:,2:3);
+n_sample = size(x_train,1);
     
 % mean function 
 m = zeros(n_pts,1);
@@ -135,21 +180,23 @@ ylabel('y')
 zlabel('function value')
 hold on
 index_Plot = 1;
-repeated_Pnt_skipper = 1;
- for i = 1:n_select
+counter = 1;
+ 
+for i = 1:n_select
+    if selected_pts_nonRepeated(counter)
     n_pointOnTraj = size(Trajectory{traj_select_Index(i)},2);
     if repeated_Pnt_Counter >= repeated_Pnt_skipper 
         if traj_select_Index(i) == repeated_Pnt_Position(repeated_Pnt_skipper,1)
             skip_Index = find(repeated_Pnt_Position(:,1)==traj_select_Index(i));
             n_skip = length(skip_Index);
             n_pointOnTraj = n_pointOnTraj - n_skip;
-            draw_Index = index_Plot:index_Plot+n_pointOnTraj-1;
 %             draw_Index(repeated_Pnt_Position(skip_Index,2)+index_Plot-1) = [];         
             repeated_Pnt_skipper = repeated_Pnt_skipper + n_skip;
         end
     end
+    draw_Index = index_Plot:index_Plot+n_pointOnTraj-1;
     plot3(Trajectory{traj_select_Index(i)}(1,:),Trajectory{traj_select_Index(i)}(2,:),y(draw_Index));
-%     index_Plot = index_Plot + n_pointOnTraj;
+    index_Plot = index_Plot + n_pointOnTraj;
  end
 hold off
 
