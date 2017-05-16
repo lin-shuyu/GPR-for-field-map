@@ -193,7 +193,7 @@ scatter3(x_train(:,1),x_train(:,2),y)
 hold off
 
 %% Optimisation to find the hyperparameters of the GP model
-theta0 = [0.9999,0.99999,0.10001];
+theta0 = [0.9999,0.99999,0.2];
 fun = @logMarginalLikelihoodWithoutGradient;
 A = [];
 b = [];
@@ -202,7 +202,7 @@ beq = [];
 lb = [0,0,0];
 ub = [];
 nonlcon = [];
-options = optimoptions(@fmincon,'Display','iter','Algorithm','interior-point');
+options = optimoptions(@fmincon,'Display','iter','Algorithm','trust-region-reflective');
 [theta_test,fval,exitflag,output] = fmincon(fun,theta0,A,b,Aeq,beq,lb,ub,nonlcon,options);
 
 % plot the prediction using the hyperparameters from the optimisation 
