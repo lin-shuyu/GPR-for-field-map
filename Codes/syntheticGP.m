@@ -8,118 +8,8 @@ close all
 
 %% Define the trajectories
 % generate trajectories - imitate the sensor path
-% line trajectories
-% horiztal lines
-n_hori = floor(20/1) + 1;
-for p = 1:n_hori
-    Trajectory{p} = 0:1:20;
-    n_pathL = size(Trajectory{p},2);
-    Trajectory{p} = [Trajectory{p};zeros(3,n_pathL)];
-    Trajectory{p}(2,:) = (p-1)*ones(1,n_pathL); 
-    for i = 1:n_pathL
-        x_temp = Trajectory{p}(1:2,i);
-    end 
-end
-
-% vertical lines
-n_vert = floor(20/1) + 1;
-for p = 1:n_vert
-    n_pathL = length(0:1:20);
-    Trajectory{n_hori+p} = zeros(4,n_pathL);
-    Trajectory{n_hori+p}(2,:) = 0:1:20;
-    Trajectory{n_hori+p}(1,:) = (p-1)*ones(1,n_pathL); 
-    for i = 1:n_pathL
-        x_temp = Trajectory{n_hori+p}(1:2,i);
-    end 
-end
-
-% diagonals
-Index_start = size(Trajectory,2);
-n_pathL = length(0:1:20);
-for p = 1:2
-    Trajectory{Index_start+p} = zeros(4,n_pathL);
-    if p == 1
-        Trajectory{Index_start+p}(1:2,:) = [0:1:20;0:1:20];
-    else
-        Trajectory{Index_start+p}(1,:) = 0:1:20;
-        Trajectory{Index_start+p}(2,:) = 20:-1:0;
-    end
-    for i = 1:n_pathL
-        x_temp = Trajectory{Index_start+p}(1:2,i);
-    end 
-end
-
-% curved trajectory 
-Index_start = size(Trajectory,2);
-n_pathL = length(0:0.5:20);
-for p = 1:10
-    Trajectory{Index_start+p} = zeros(4,n_pathL);
-    Trajectory{Index_start+p}(2,:) = [0:0.5:20];
-    Trajectory{Index_start+p}(1,:) = 10*(1+sin(0.1*p*Trajectory{Index_start+p}(2,:)));
-    for i = 1:n_pathL
-        x_temp = Trajectory{Index_start+p}(1:2,i);
-    end 
-end
-
-
-%% select n_select trajectories to use - randomly use which one
-n_traj = size(Trajectory,2);
-rng('shuffle');
-n_select = 4;
-traj_select_Index = zeros(4,1);
-traj_select_Index(1) = randi([1 21],1,1); % generate one horizontal traj
-traj_select_Index(2) = randi([22 42],1,1); % generate one vertical traj
-traj_select_Index(3) = randi([43 44],1,1); % generate one diagonal traj
-traj_select_Index(4) = randi([44 54],1,1); % generate one curved traj
-
-% randperm(n_traj,n_select); % generate non-repeated integer values
-
-% keep track of the input space locations of these measurements along the selected trajectories
-% keep a record of all data points along the selected trajectories
-n_pts = 21*3+41;
-selected_pts_all = zeros(n_pts,3);
-index_counter = 1;
-for i = 1:n_select
-    traj_pts = size(Trajectory{traj_select_Index(i)},2);
-    selected_pts_all(index_counter:index_counter+traj_pts-1,1) = traj_select_Index(i) * ones(traj_pts,1);
-    selected_pts_all(index_counter:index_counter+traj_pts-1,2:3) = Trajectory{traj_select_Index(i)}(1:2,:).';
-    index_counter =  index_counter + traj_pts;
-end
-
-% remove the repeated points and get a list of unique locations 
-selected_pts_nonRepeated = selected_pts_all;
-index_counter = 1;
-for i = 1:n_select
-    if i == 1
-        index_counter = index_counter + size(Trajectory{traj_select_Index(i)},2);
-        repeat_counter = index_counter;
-    else
-        for p = index_counter:n_pts
-            pt_to_check = selected_pts_all(p,2:3).';
-            x_index = find(selected_pts_all(1:p-1,2) == pt_to_check(1));
-            y_index = find(selected_pts_all(1:p-1,3) == pt_to_check(2));
-            if (isempty(x_index) && isempty(y_index))
-                for m = 1:length(x_index)
-                    repeat_index = find(y_index == x_index(m));
-                end
-            else 
-                repeat_index = [];
-            end
-            if ~isempty(repeat_index)
-                selected_pts_nonRepeated(repeat_counter,:) = [];
-                repeat_counter = repeat_counter - 1;
-            end
-            repeat_counter = repeat_counter + 1;
-        end
-    end
-end
-
-
-
-
-
-
-
+l = 20;
+[selected_pts_nonRepeated, n_select, Trajectory, traj_select_Index] = trajGenerator(l);
 
 
 %% generate the function value at Trajectory location based on a SE GP kernel
@@ -127,6 +17,7 @@ x_train = selected_pts_nonRepeated(:,2:3);
 n_sample = size(x_train,1);
     
 % mean function 
+n_pts = size(selected_pts_nonRepeated,1);
 m = zeros(n_pts,1);
 theta = [1,1,0.1];
 K = covMatrixSE(x_train,x_train,theta);
@@ -192,35 +83,35 @@ hold on
 scatter3(x_train(:,1),x_train(:,2),y)
 hold off
 
-%% Optimisation to find the hyperparameters of the GP model
-theta0 = [0.9999,0.99999,0.10001];
-fun = @logMarginalLikelihoodWithoutGradient;
-A = [];
-b = [];
-Aeq = [];
-beq = [];
-lb = [0,0,0];
-ub = [];
-nonlcon = [];
-options = optimoptions(@fmincon,'Display','iter','Algorithm','interior-point');
-[theta_test,fval,exitflag,output] = fmincon(fun,theta0,A,b,Aeq,beq,lb,ub,nonlcon,options);
-
-% plot the prediction using the hyperparameters from the optimisation 
-% prediction cov matrices
-K_test_star = covMatrixSE(x_train,x_pred,theta_test);
-K_test_star2 = covMatrixSE(x_pred,x_pred,theta_test);
-
-% make prediciton 
-GPR_test_mean = K_test_star.' * K_inv * y;
-GPR_test_cov = K_test_star2 - K_test_star.' * K_inv * K_test_star;
-
-% plot the 3d map
-Z_test = reshape(GPR_test_mean,[n_grid,n_grid]);
-figure(3)
-mesh(pred_grid,pred_grid,Z_test.');
-hold on
-scatter3(x_train(:,1),x_train(:,2),y)
-hold off
+% %% Optimisation to find the hyperparameters of the GP model
+% theta0 = [0.9999,0.99999,0.10001];
+% fun = @logMarginalLikelihoodWithoutGradient;
+% A = [];
+% b = [];
+% Aeq = [];
+% beq = [];
+% lb = [0,0,0];
+% ub = [];
+% nonlcon = [];
+% options = optimoptions(@fmincon,'Display','iter','Algorithm','interior-point');
+% [theta_test,fval,exitflag,output] = fmincon(fun,theta0,A,b,Aeq,beq,lb,ub,nonlcon,options);
+% 
+% % plot the prediction using the hyperparameters from the optimisation 
+% % prediction cov matrices
+% K_test_star = covMatrixSE(x_train,x_pred,theta_test);
+% K_test_star2 = covMatrixSE(x_pred,x_pred,theta_test);
+% 
+% % make prediciton 
+% GPR_test_mean = K_test_star.' * K_inv * y;
+% GPR_test_cov = K_test_star2 - K_test_star.' * K_inv * K_test_star;
+% 
+% % plot the 3d map
+% Z_test = reshape(GPR_test_mean,[n_grid,n_grid]);
+% figure(3)
+% mesh(pred_grid,pred_grid,Z_test.');
+% hold on
+% scatter3(x_train(:,1),x_train(:,2),y)
+% hold off
 
 %% use GPML to work a solution as a reference to compare with
 % specify mean, covariance and likelihood functions
@@ -229,11 +120,11 @@ covfunc = @covSEiso;
 likfunc = @likGauss;
 
 % initialise hyperparameter struct
-hyp = struct('mean', [], 'cov', [log(0.9) log(0.9)], 'lik', log(0.2));
+hyp = struct('mean', [], 'cov', [log(0.9) log(0.9)], 'lik', log(0.1));
 
 % call gp() function
 [nlz dnlz] = gp(hyp, @infGaussLik, meanfunc, covfunc, likfunc, x_train, y);
-hyp2 = minimize(hyp, @gp, -100, @infGaussLik, meanfunc, covfunc, likfunc, x_train, y);
+hyp2 = minimize(hyp, @gp, -300, @infGaussLik, meanfunc, covfunc, likfunc, x_train, y);
 [mu s2] = gp(hyp2, @infGaussLik, meanfunc, covfunc, likfunc, x_train, y, x_pred);
 
 % figure(4)
